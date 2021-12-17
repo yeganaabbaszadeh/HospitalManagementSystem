@@ -1,9 +1,9 @@
--- CREATE DATABASE
+# CREATE DATABASE
 CREATE DATABASE hospital;
 USE hospital;
 
 
--- CREATE TABLES
+# CREATE TABLES
 CREATE TABLE department (
     department_id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
     departmentName VARCHAR(50) NOT NULL,
@@ -122,7 +122,7 @@ ADD CONSTRAINT fk_treatment_diagnosis_id
 FOREIGN KEY(diagnosis_id) REFERENCES diagnosis(diagnosis_id);
 
 
-# -- INSERT VALUES INTO TABLES
+# INSERT VALUES INTO TABLES
 INSERT INTO department(departmentName, departmentHead)
 VALUES
 ('neurology', 'Winifred Curtis'),
@@ -306,7 +306,7 @@ VALUES
 (8, 5, 'celiac disease', 'immune system attacks own tissues while eating gluten'),
 (8, 8, 'GERD', 'gastroesophageal reflux disease'),
 (9, 3, 'stroke', 'elder’s brain cells do not get enough supply of oxygen and nutrients'),
-(9, 4, 'Parkinson’s disease', 'a brain disorder that leads to shaking, stiffness, and difficulty with walking, balance, and coordination'),
+(9, 4, 'Parkinsons disease', 'a brain disorder that leads to shaking, stiffness, and difficulty with walking, balance, and coordination'),
 (10, 11, 'arrhythmias', 'a problem with the rate or rhythm of heartbeat'),
 (10, 12, 'cardiomyopathy', 'the walls of the heart chambers have become stretched, thickened or stiff'),
 (11, 24, 'sleep apnea', 'breathing repeatedly stops and starts'),
@@ -354,10 +354,162 @@ VALUES
 (15, 29, 29, 'antibiotic therapy', 'outpatient'),
 (15, 30, 30, 'surgery', 'inpatient');
 
--- CREATE QUERIES (5)
+# CREATE QUERIES (3)
+# Show departmentname, departmentHead, group doctors
+SELECT department.departmentName, department.departmentHead, GROUP_CONCAT(CONCAT_WS(', ', doctor.firstname, doctor.lastname) SEPARATOR '; ') AS 'Doctors'
+FROM department, doctor
+WHERE department.department_id = doctor.department_id
+GROUP BY doctor.department_id;
+
+# Show doctorname, patientname, diagnosis
+SELECT CONCAT_WS(', ', doctor.firstname, doctor.lastname) AS 'Doctor',
+       CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient',
+       diagnosis.diagnosisName AS 'Diagnosis'
+FROM doctor, patient, diagnosis
+WHERE diagnosis.doctor_id = doctor.doctor_id AND diagnosis.patient_id = patient.patient_id;
+
+# Show patientName, testName, testDate
+SELECT CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient', test.testName AS 'Test', test.testDate AS 'Date and time'
+FROM patient, test
+WHERE test.patient_id = patient.patient_id;
+
 
 -- CREATE PROCEDURES (2)
+DELIMITER //
+CREATE PROCEDURE GetPatientInfoByDepartment(
+    IN deptName VARCHAR(255)
+)
+BEGIN
+    SELECT CONCAT_WS(', ', doctor.firstname, doctor.lastname) AS 'Doctor',
+           GROUP_CONCAT(CONCAT_WS(', ', patient.firstname, patient.lastname) SEPARATOR '; ') AS 'Patients'
+    FROM department, doctor, patient, doctor_has_patient
+    WHERE department.departmentName = deptName
+    AND
+          doctor.department_id = department.department_id
+    AND doctor_has_patient.doctor_id = doctor.doctor_id
+    AND doctor_has_patient.patient_id = patient.patient_id
+    GROUP BY doctor.doctor_id;
+END //
+DELIMITER ;
+
+# CALL GetPatientInfoByDepartment('neurology');
+# CALL GetPatientInfoByDepartment('cardiology');
+
+
+DELIMITER //
+CREATE PROCEDURE GetPatientInfoByTest(
+    IN tName VARCHAR(255)
+)
+BEGIN
+    SELECT patient.patient_id AS 'Patient ID',
+           CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Name, surname',
+           test.testDate AS 'Date'
+    FROM patient, test
+    WHERE test.testName = tName
+    AND
+          test.patient_id = patient.patient_id;
+END //
+DELIMITER ;
+
+# CALL GetPatientInfoByTest('blood test');
+# CALL GetPatientInfoByTest('ENT examination');
+
 
 -- CREATE FUNCTIONS (2)
+DELIMITER //
+CREATE FUNCTION PatientCategoryForAge(
+    dateOfBirth DATE
+)
+RETURNS VARCHAR(50) DETERMINISTIC
+BEGIN
+    DECLARE ageCategory VARCHAR(50);
+    IF TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) >= 18 THEN
+    SET ageCategory = 'adult';
+    ELSEIF TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) < 18 THEN
+    SET ageCategory = 'child';
+    END IF;
+RETURN (ageCategory);
+END //
+DELIMITER ;
+
+SELECT CONCAT_WS(', ', doctor.firstname, doctor.lastname) AS 'Doctor',
+       CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient',
+       PatientCategoryForAge(patient.dateOfBirth) AS 'Age category'
+FROM doctor, patient, doctor_has_patient
+WHERE doctor_has_patient.doctor_id = doctor.doctor_id
+    AND doctor_has_patient.patient_id = patient.patient_id;
+
+
+DELIMITER //
+CREATE FUNCTION AppointmentDuration(
+    startTime DATETIME,
+    endTime DATETIME
+)
+RETURNS INT DETERMINISTIC
+BEGIN
+    DECLARE duration INT;
+    SET duration = TIMESTAMPDIFF(MINUTE , startTime, endTime);
+RETURN (duration);
+END //
+DELIMITER ;
+
+SELECT CONCAT_WS(', ', doctor.firstname, doctor.lastname) AS 'Doctor',
+       CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient',
+       AppointmentDuration(appointment.startTime, appointment.endTime) AS 'Duration (with minutes)'
+FROM doctor, patient, appointment
+WHERE appointment.doctor_id = doctor.doctor_id AND appointment.patient_id = patient.patient_id;
+
 
 -- CREATE TRIGGERS (2)
+DROP TABLE IF EXISTS departmentChanges;
+
+CREATE TABLE departmentChanges (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    departmentName VARCHAR(50),
+    formerHead VARCHAR(50),
+    currentHead VARCHAR(50),
+    changeDate DATE
+);
+
+DELIMITER //
+CREATE TRIGGER after_department_update
+    AFTER UPDATE
+    ON department FOR EACH ROW
+BEGIN
+    IF OLD.departmentHead <> NEW.departmentHead THEN
+        INSERT INTO departmentChanges(departmentName, formerHead, currentHead, changeDate)
+            VALUES (OLD.departmentName, OLD.departmentHead, NEW.departmentHead, CURDATE());
+    END IF;
+END //
+DELIMITER ;
+
+# UPDATE department
+# SET departmentHead = 'Alexandria Clark'
+# WHERE department_id = 1;
+
+
+DROP TABLE IF EXISTS appointmentArchives;
+
+CREATE TABLE appointmentArchives (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    appointment_id INT,
+    doctor_id INT,
+    patient_id INT,
+    startTime DATETIME,
+    endTime DATETIME,
+    deletedDate DATE
+);
+
+DELIMITER //
+CREATE TRIGGER before_appointment_delete
+BEFORE DELETE
+ON appointment FOR EACH ROW
+BEGIN
+    INSERT INTO appointmentArchives(appointment_id, doctor_id, patient_id, startTime, endTime, deletedDate)
+    VALUES(OLD.appointment_id, OLD.doctor_id, OLD.patient_id, OLD.startTime, OLD.endTime, CURDATE());
+END //
+DELIMITER ;
+
+# DELETE FROM appointment
+# WHERE appointment_id = 1;
+
