@@ -1,9 +1,9 @@
-# CREATE DATABASE
+-- CREATE DATABASE
 CREATE DATABASE hospital;
 USE hospital;
 
 
-# CREATE TABLES
+-- CREATE TABLES
 CREATE TABLE department (
     department_id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
     departmentName VARCHAR(50) NOT NULL,
@@ -122,7 +122,7 @@ ADD CONSTRAINT fk_treatment_diagnosis_id
 FOREIGN KEY(diagnosis_id) REFERENCES diagnosis(diagnosis_id);
 
 
-# INSERT VALUES INTO TABLES
+-- INSERT VALUES INTO TABLES
 INSERT INTO department(departmentName, departmentHead)
 VALUES
 ('neurology', 'Winifred Curtis'),
@@ -354,21 +354,21 @@ VALUES
 (15, 29, 29, 'antibiotic therapy', 'outpatient'),
 (15, 30, 30, 'surgery', 'inpatient');
 
-# CREATE QUERIES (3)
-# Show departmentname, departmentHead, group doctors
+-- CREATE QUERIES (3)
+-- Show departmentname, departmentHead, group doctors
 SELECT department.departmentName, department.departmentHead, GROUP_CONCAT(CONCAT_WS(', ', doctor.firstname, doctor.lastname) SEPARATOR '; ') AS 'Doctors'
 FROM department, doctor
 WHERE department.department_id = doctor.department_id
 GROUP BY doctor.department_id;
 
-# Show doctorname, patientname, diagnosis
+-- Show doctorname, patientname, diagnosis
 SELECT CONCAT_WS(', ', doctor.firstname, doctor.lastname) AS 'Doctor',
        CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient',
        diagnosis.diagnosisName AS 'Diagnosis'
 FROM doctor, patient, diagnosis
 WHERE diagnosis.doctor_id = doctor.doctor_id AND diagnosis.patient_id = patient.patient_id;
 
-# Show patientName, testName, testDate
+-- Show patientName, testName, testDate
 SELECT CONCAT_WS(', ', patient.firstname, patient.lastname) AS 'Patient', test.testName AS 'Test', test.testDate AS 'Date and time'
 FROM patient, test
 WHERE test.patient_id = patient.patient_id;
@@ -392,8 +392,8 @@ BEGIN
 END //
 DELIMITER ;
 
-# CALL GetPatientInfoByDepartment('neurology');
-# CALL GetPatientInfoByDepartment('cardiology');
+-- CALL GetPatientInfoByDepartment('neurology');
+-- CALL GetPatientInfoByDepartment('cardiology');
 
 
 DELIMITER //
@@ -411,8 +411,8 @@ BEGIN
 END //
 DELIMITER ;
 
-# CALL GetPatientInfoByTest('blood test');
-# CALL GetPatientInfoByTest('ENT examination');
+-- CALL GetPatientInfoByTest('blood test');
+-- CALL GetPatientInfoByTest('ENT examination');
 
 
 -- CREATE FUNCTIONS (2)
@@ -483,9 +483,9 @@ BEGIN
 END //
 DELIMITER ;
 
-# UPDATE department
-# SET departmentHead = 'Alexandria Clark'
-# WHERE department_id = 1;
+-- UPDATE department
+-- SET departmentHead = 'Alexandria Clark'
+-- WHERE department_id = 1;
 
 
 DROP TABLE IF EXISTS appointmentArchives;
@@ -510,6 +510,6 @@ BEGIN
 END //
 DELIMITER ;
 
-# DELETE FROM appointment
-# WHERE appointment_id = 1;
+-- DELETE FROM appointment
+-- WHERE appointment_id = 1;
 
