@@ -485,7 +485,7 @@ DELIMITER ;
 
 -- UPDATE department
 -- SET departmentHead = 'Alexandria Clark'
--- WHERE department_id = 1;
+-- WHERE department_id = 3;
 
 
 DROP TABLE IF EXISTS appointmentArchives;
@@ -510,6 +510,6 @@ BEGIN
 END //
 DELIMITER ;
 
--- DELETE FROM appointment
--- WHERE appointment_id = 1;
+DELETE FROM appointment
+WHERE appointment_id = 30;
 
